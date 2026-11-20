@@ -64,3 +64,4 @@ export const Header = ({ onGoHome }: HeaderProps) => {
     </header>
   );
 };
+

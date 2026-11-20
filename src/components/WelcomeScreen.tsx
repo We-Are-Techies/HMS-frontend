@@ -113,3 +113,4 @@ export const WelcomeScreen = ({ onStartRegistration }: WelcomeScreenProps) => {
     </div>
   );
 };
+

@@ -772,3 +772,4 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onBack, onSu
     </div>
   );
 };
+

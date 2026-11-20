@@ -136,3 +136,4 @@ export const SuccessModal = ({ record, onRegisterAnother, onGoHome }: SuccessMod
     </div>
   );
 };
+

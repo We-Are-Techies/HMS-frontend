@@ -6,6 +6,8 @@ import { SuccessModal } from './components/SuccessModal';
 import type { PatientRecord } from './types/registration';
 import { Users, FileCheck, Phone, ShieldCheck } from 'lucide-react';
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 export function App() {
   const [currentPage, setCurrentPage] = useState<'welcome' | 'form' | 'success'>('welcome');
   const [lastRecord, setLastRecord] = useState<PatientRecord | null>(null);
@@ -145,7 +147,7 @@ export function App() {
             </span>
           </div>
 
-          <p>© {new Date().getFullYear()} Varma Nursing Home. All rights reserved.</p>
+          <p>© {CURRENT_YEAR} Varma Nursing Home. All rights reserved.</p>
         </div>
       </footer>
     </div>
