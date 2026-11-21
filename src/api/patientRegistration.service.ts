@@ -60,3 +60,4 @@ export const patientRegistrationService = {
     return response.data;
   },
 };
+

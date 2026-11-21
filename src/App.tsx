@@ -3,14 +3,19 @@ import { Header } from './components/Header';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { RegistrationForm } from './components/RegistrationForm';
 import { SuccessModal } from './components/SuccessModal';
+import { AdminLogin } from './components/admin/AdminLogin';
+import { AdminDashboard } from './components/admin/AdminDashboard';
 import type { PatientRecord } from './types/registration';
+import type { AdminUser } from './types/admin';
 import { patientRegistrationService } from './api/patientRegistration.service';
+import { adminService } from './api/admin.service';
 import { Users, FileCheck, Phone, ShieldCheck } from 'lucide-react';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
 export function App() {
-  const [currentPage, setCurrentPage] = useState<'welcome' | 'form' | 'success'>('welcome');
+  const [currentPage, setCurrentPage] = useState<'welcome' | 'form' | 'success' | 'admin-login' | 'admin-dashboard'>('welcome');
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [lastRecord, setLastRecord] = useState<PatientRecord | null>(null);
   const [registeredPatients, setRegisteredPatients] = useState<PatientRecord[]>(() => {
     try {
@@ -21,6 +26,21 @@ export function App() {
     }
   });
   const [showRecentDrawer, setShowRecentDrawer] = useState(false);
+
+  // Check existing admin cookie session on mount
+  useEffect(() => {
+    adminService
+      .getProfile()
+      .then((res) => {
+        if (res && res.admin) {
+          setAdminUser(res.admin);
+        }
+      })
+      .catch(() => {
+        // Not logged in as admin; stay in public mode
+        setAdminUser(null);
+      });
+  }, []);
 
   // Synchronize recent registrations from backend on mount
   useEffect(() => {
@@ -77,18 +97,50 @@ export function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleGoToAdmin = () => {
+    if (adminUser) {
+      setCurrentPage('admin-dashboard');
+    } else {
+      setCurrentPage('admin-login');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleLoginSuccess = (admin: AdminUser) => {
+    setAdminUser(admin);
+    setCurrentPage('admin-dashboard');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleLogout = () => {
+    setAdminUser(null);
+    setCurrentPage('admin-login');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // If in Admin Dashboard view and authenticated, render full-screen Admin Dashboard
+  if (currentPage === 'admin-dashboard' && adminUser) {
+    return (
+      <AdminDashboard
+        admin={adminUser}
+        onLogout={handleLogout}
+        onGoToPublicPortal={handleBackToWelcome}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50/40 via-white to-slate-50 text-slate-800 flex flex-col font-sans antialiased selection:bg-blue-600 selection:text-white">
       {/* Clinic Header */}
-      <Header onGoHome={handleBackToWelcome} />
+      <Header onGoHome={handleBackToWelcome} onGoToAdmin={handleGoToAdmin} />
 
-      {/* Floating Recent Intake Counter & Toggle */}
-      {registeredPatients.length > 0 && (
+      {/* Floating Recent Intake Counter & Toggle (Only on public screens) */}
+      {registeredPatients.length > 0 && (currentPage === 'welcome' || currentPage === 'form') && (
         <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-4 flex justify-end">
           <button
             type="button"
             onClick={() => setShowRecentDrawer(!showRecentDrawer)}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:text-blue-700 hover:border-blue-300 shadow-xs transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:text-blue-700 hover:border-blue-300 shadow-2xs transition-colors cursor-pointer"
           >
             <Users className="h-3.5 w-3.5 text-blue-600" />
             <span>Today's Registrations ({registeredPatients.length})</span>
@@ -97,7 +149,7 @@ export function App() {
       )}
 
       {/* Recent Registrations Quick Slide-out / Modal */}
-      {showRecentDrawer && (
+      {showRecentDrawer && (currentPage === 'welcome' || currentPage === 'form') && (
         <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 mt-4">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-5">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -154,11 +206,18 @@ export function App() {
             onGoHome={handleBackToWelcome}
           />
         )}
+
+        {currentPage === 'admin-login' && (
+          <AdminLogin
+            onLoginSuccess={handleLoginSuccess}
+            onBackToPortal={handleBackToWelcome}
+          />
+        )}
       </main>
 
       {/* Footer */}
       <footer className="mt-auto bg-white border-t border-slate-200 py-6 text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-slate-700 font-medium">
             <span className="font-bold text-slate-900">Varma Nursing Home</span>
             <span>•</span>
@@ -175,7 +234,17 @@ export function App() {
             </span>
           </div>
 
-          <p>© {CURRENT_YEAR} Varma Nursing Home. All rights reserved.</p>
+          <div className="flex items-center gap-3">
+            <p>© {CURRENT_YEAR} Varma Nursing Home. All rights reserved.</p>
+            <span className="text-slate-300">•</span>
+            <button
+              type="button"
+              onClick={handleGoToAdmin}
+              className="text-blue-600 hover:text-blue-800 font-semibold cursor-pointer underline underline-offset-2"
+            >
+              Admin Staff Login
+            </button>
+          </div>
         </div>
       </footer>
     </div>

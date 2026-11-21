@@ -1,10 +1,11 @@
-import { Activity, Phone, Clock, ShieldCheck } from 'lucide-react';
+import { Activity, Phone, Clock, ShieldCheck, Shield } from 'lucide-react';
 
 interface HeaderProps {
   onGoHome?: () => void;
+  onGoToAdmin?: () => void;
 }
 
-export const Header = ({ onGoHome }: HeaderProps) => {
+export const Header = ({ onGoHome, onGoToAdmin }: HeaderProps) => {
   return (
     <header className="bg-white border-b border-sky-100 sticky top-0 z-30 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -32,36 +33,49 @@ export const Header = ({ onGoHome }: HeaderProps) => {
             </div>
           </div>
 
-          {/* Quick Info & Helpdesk */}
-          <div className="hidden md:flex items-center gap-6 text-xs text-slate-600">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-sky-50 text-blue-700">
-                <Clock className="h-4 w-4" />
+          {/* Quick Info & Staff Admin Button */}
+          <div className="flex items-center gap-5">
+            <div className="hidden lg:flex items-center gap-6 text-xs text-slate-600">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-sky-50 text-blue-700">
+                  <Clock className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-800">OPD Timings</p>
+                  <p className="text-slate-500">08:00 AM – 09:00 PM</p>
+                </div>
               </div>
-              <div>
-                <p className="font-semibold text-slate-800">OPD Timings</p>
-                <p className="text-slate-500">08:00 AM – 09:00 PM</p>
+
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700">
+                  <Phone className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-800">Emergency Desk</p>
+                  <p className="text-slate-500">+91 (0) 800-432-1000</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 pl-3 border-l border-slate-200 text-emerald-600 font-medium">
+                <ShieldCheck className="h-4 w-4" />
+                <span>NABH Accredited</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700">
-                <Phone className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="font-semibold text-slate-800">Emergency Desk</p>
-                <p className="text-slate-500">+91 (0) 800-432-1000</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 pl-3 border-l border-slate-200 text-emerald-600 font-medium">
-              <ShieldCheck className="h-4 w-4" />
-              <span>NABH Accredited</span>
-            </div>
+            {/* Admin Portal Toggle Button */}
+            {onGoToAdmin && (
+              <button
+                type="button"
+                onClick={onGoToAdmin}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-blue-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 transition-all cursor-pointer shadow-2xs hover:shadow-xs"
+              >
+                <Shield className="h-4 w-4 text-blue-600" />
+                <span>Admin Portal</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
     </header>
   );
 };
-

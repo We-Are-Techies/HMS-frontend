@@ -9,6 +9,7 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 10000,
+  withCredentials: true, // Enables HTTP-only cookies transmission for admin auth session
 });
 
 // Interceptor for standardized error handling
@@ -18,7 +19,7 @@ apiClient.interceptors.response.use(
     let errorMessage = 'Network error or backend server unavailable. Please ensure NestJS backend is running.';
     
     if (error.response) {
-      // Backend returned error response (e.g. 400 Bad Request, 404 Not Found, 500)
+      // Backend returned error response (e.g. 400 Bad Request, 401 Unauthorized, 404 Not Found, 500)
       const data = error.response.data;
       if (data && data.message) {
         if (Array.isArray(data.message)) {
