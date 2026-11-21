@@ -60,3 +60,4 @@ export interface AdminSinglePatientResponse {
   statusCode: number;
   data: BackendPatientRegistrationResponse;
 }
+

@@ -221,3 +221,4 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
     </div>
   );
 };
+

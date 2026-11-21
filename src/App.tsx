@@ -14,7 +14,14 @@ import { Users, FileCheck, Phone, ShieldCheck } from 'lucide-react';
 const CURRENT_YEAR = new Date().getFullYear();
 
 export function App() {
-  const [currentPage, setCurrentPage] = useState<'welcome' | 'form' | 'success' | 'admin-login' | 'admin-dashboard'>('welcome');
+  const [currentPage, setCurrentPage] = useState<'welcome' | 'form' | 'success' | 'admin-login' | 'admin-dashboard'>(() => {
+    const path = window.location.pathname.toLowerCase();
+    const hash = window.location.hash.toLowerCase();
+    if (path.startsWith('/admin') || hash.includes('admin')) {
+      return 'admin-login';
+    }
+    return 'welcome';
+  });
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [lastRecord, setLastRecord] = useState<PatientRecord | null>(null);
   const [registeredPatients, setRegisteredPatients] = useState<PatientRecord[]>(() => {
@@ -34,6 +41,11 @@ export function App() {
       .then((res) => {
         if (res && res.admin) {
           setAdminUser(res.admin);
+          const path = window.location.pathname.toLowerCase();
+          const hash = window.location.hash.toLowerCase();
+          if (path.startsWith('/admin') || hash.includes('admin')) {
+            setCurrentPage('admin-dashboard');
+          }
         }
       })
       .catch(() => {
@@ -41,6 +53,21 @@ export function App() {
         setAdminUser(null);
       });
   }, []);
+
+  // Listen to browser popstate (back/forward)
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      if (path.startsWith('/admin') || hash.includes('admin')) {
+        setCurrentPage(adminUser ? 'admin-dashboard' : 'admin-login');
+      } else {
+        setCurrentPage('welcome');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [adminUser]);
 
   // Synchronize recent registrations from backend on mount
   useEffect(() => {
@@ -71,11 +98,13 @@ export function App() {
 
   const handleStartRegistration = () => {
     setCurrentPage('form');
+    window.history.pushState(null, '', '/');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleBackToWelcome = () => {
     setCurrentPage('welcome');
+    window.history.pushState(null, '', '/');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -100,8 +129,10 @@ export function App() {
   const handleGoToAdmin = () => {
     if (adminUser) {
       setCurrentPage('admin-dashboard');
+      window.history.pushState(null, '', '/admin');
     } else {
       setCurrentPage('admin-login');
+      window.history.pushState(null, '', '/admin');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -109,12 +140,14 @@ export function App() {
   const handleLoginSuccess = (admin: AdminUser) => {
     setAdminUser(admin);
     setCurrentPage('admin-dashboard');
+    window.history.pushState(null, '', '/admin');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleLogout = () => {
     setAdminUser(null);
     setCurrentPage('admin-login');
+    window.history.pushState(null, '', '/admin');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
