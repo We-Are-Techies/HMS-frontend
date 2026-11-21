@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { RegistrationForm } from './components/RegistrationForm';
 import { SuccessModal } from './components/SuccessModal';
 import type { PatientRecord } from './types/registration';
+import { patientRegistrationService } from './api/patientRegistration.service';
 import { Users, FileCheck, Phone, ShieldCheck } from 'lucide-react';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -20,6 +21,33 @@ export function App() {
     }
   });
   const [showRecentDrawer, setShowRecentDrawer] = useState(false);
+
+  // Synchronize recent registrations from backend on mount
+  useEffect(() => {
+    patientRegistrationService
+      .getAllRegistrations(1, 20)
+      .then((res) => {
+        if (res && res.data && res.data.length > 0) {
+          const mapped: PatientRecord[] = res.data.map((p) => ({
+            id: p._id,
+            name: p.patientIdentity.name,
+            age: String(p.patientIdentity.age),
+            gender: p.patientIdentity.gender === 'Female' ? '2. Female' : '1. Male',
+            height: String(p.bodyMeasurements.height),
+            weight: String(p.bodyMeasurements.weight),
+            systolicBP: String(p.bloodPressureVitals.systolic),
+            diastolicBP: String(p.bloodPressureVitals.diastolic),
+            registrationDate: p.registrationTimestamp.date,
+            registrationTime: p.registrationTimestamp.time,
+            submittedAt: p.createdAt,
+          }));
+          setRegisteredPatients(mapped);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not fetch existing patient registrations from backend:', err.message);
+      });
+  }, []);
 
   const handleStartRegistration = () => {
     setCurrentPage('form');

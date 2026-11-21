@@ -10,11 +10,13 @@ import {
   Ruler, 
   Weight as WeightIcon, 
   RotateCcw, 
-  Info,
-  ShieldCheck,
-  AlertCircle
+  Info, 
+  ShieldCheck, 
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 import type { PatientRegistrationData, FormErrors, PatientRecord } from '../types/registration';
+import { patientRegistrationService } from '../api/patientRegistration.service';
 
 interface RegistrationFormProps {
   onBack: () => void;
@@ -51,6 +53,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onBack, onSu
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [touchState, setTouchState] = useState<Record<string, boolean>>({});
+  const [apiError, setApiError] = useState<string | null>(null);
 
   // Keep auto-generated time fresh every second until submitted
   useEffect(() => {
@@ -234,29 +237,53 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onBack, onSu
   const bmiData = calculateBMI();
   const bpCategory = getBPCategory();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setApiError(null);
+
+    // Prevent duplicate form submissions while request is in flight
+    if (isSubmitting) return;
+
     if (!validateAll()) {
       return;
     }
 
     setIsSubmitting(true);
 
-    // Simulate clinical registration processing
-    setTimeout(() => {
-      const generatedId = `VNH-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    try {
+      // 1. Submit mapped DTO payload to NestJS Backend via POST /api/v1/patient-registrations
+      const createdRecord = await patientRegistrationService.createRegistration(formData);
+
+      // 2. Map server response (with server-generated timestamp & ObjectId)
       const record: PatientRecord = {
-        ...formData,
-        id: generatedId,
-        submittedAt: new Date().toISOString(),
+        id: createdRecord._id,
+        name: createdRecord.patientIdentity.name,
+        age: String(createdRecord.patientIdentity.age),
+        gender: createdRecord.patientIdentity.gender === 'Female' ? '2. Female' : '1. Male',
+        height: String(createdRecord.bodyMeasurements.height),
+        weight: String(createdRecord.bodyMeasurements.weight),
+        systolicBP: String(createdRecord.bloodPressureVitals.systolic),
+        diastolicBP: String(createdRecord.bloodPressureVitals.diastolic),
+        registrationDate: createdRecord.registrationTimestamp.date,
+        registrationTime: createdRecord.registrationTimestamp.time,
+        submittedAt: createdRecord.createdAt,
         bmi: bmiData?.bmiVal,
         bmiCategory: bmiData?.category,
         bpCategory: bpCategory?.label,
       };
 
+      // 3. Reset form on successful registration
+      handleReset();
       setIsSubmitting(false);
+
+      // 4. Trigger success callback with saved document
       onSubmitSuccess(record);
-    }, 600);
+    } catch (err: any) {
+      console.error('Patient registration error:', err);
+      setIsSubmitting(false);
+      const message = err.message || 'Failed to submit registration. Please ensure backend server is running.';
+      setApiError(message);
+    }
   };
 
   return (
@@ -304,6 +331,16 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onBack, onSu
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} noValidate className="p-6 sm:p-10 space-y-8">
+          {/* API Error Notification */}
+          {apiError && (
+            <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3 shadow-xs">
+              <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-bold text-rose-900">Registration Submission Failed</p>
+                <p className="text-xs text-rose-700 mt-1 leading-relaxed">{apiError}</p>
+              </div>
+            </div>
+          )}
           {/* SECTION 1: Patient Identity & Demographics */}
           <div>
             <div className="flex items-center gap-2 pb-3 mb-6 border-b border-slate-200">
