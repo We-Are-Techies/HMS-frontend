@@ -23,20 +23,21 @@ interface RegistrationFormProps {
   onSubmitSuccess: (record: PatientRecord) => void;
 }
 
-export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onBack, onSubmitSuccess }) => {
-  // Helpers for current date & time formatted
-  const getCurrentDate = () => {
-    const today = new Date();
-    const day = String(today.getDate()).padStart(2, '0');
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const year = today.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
+// Helpers for current date & time formatted
+const getCurrentDate = () => {
+  const today = new Date();
+  const day = String(today.getDate()).padStart(2, '0');
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const year = today.getFullYear();
+  return `${day}/${month}/${year}`;
+};
 
-  const getCurrentTime = () => {
-    const today = new Date();
-    return today.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-  };
+const getCurrentTime = () => {
+  const today = new Date();
+  return today.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+};
+
+export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onBack, onSubmitSuccess }) => {
 
   const [formData, setFormData] = useState<PatientRegistrationData>({
     name: '',
