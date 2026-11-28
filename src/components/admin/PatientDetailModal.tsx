@@ -13,6 +13,7 @@ import {
   Check
 } from 'lucide-react';
 import type { BackendPatientRegistrationResponse } from '../../types/registration';
+import { formatPatientName } from '../../types/registration';
 
 interface PatientDetailModalProps {
   patient: BackendPatientRegistrationResponse | null;
@@ -25,7 +26,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
   if (!patient) return null;
 
   const handleCopyId = () => {
-    navigator.clipboard.writeText(patient._id);
+    navigator.clipboard.writeText(String(patient.patientId ?? patient._id));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -35,8 +36,10 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
   };
 
   // Calculate BMI
-  const heightInMeters = patient.bodyMeasurements.height / 100;
-  const bmi = (patient.bodyMeasurements.weight / (heightInMeters * heightInMeters)).toFixed(1);
+  const heightInMeters = (patient.bodyMeasurements?.height ?? 0) / 100;
+  const bmi = heightInMeters > 0 && patient.bodyMeasurements?.weight != null
+    ? (patient.bodyMeasurements.weight / (heightInMeters * heightInMeters)).toFixed(1)
+    : '';
   const bmiNum = parseFloat(bmi);
   let bmiCategory = 'Normal weight';
   let bmiBadgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
@@ -52,22 +55,8 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
     bmiBadgeClass = 'bg-rose-50 text-rose-700 border-rose-200';
   }
 
-  // BP Clinical Category
-  const sys = patient.bloodPressureVitals.systolic;
-  const dia = patient.bloodPressureVitals.diastolic;
-  let bpCategory = 'Normal Blood Pressure';
-  let bpBadgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
-
-  if (sys >= 140 || dia >= 90) {
-    bpCategory = 'Stage 2 Hypertension';
-    bpBadgeClass = 'bg-rose-50 text-rose-700 border-rose-200';
-  } else if ((sys >= 130 && sys <= 139) || (dia >= 80 && dia <= 89)) {
-    bpCategory = 'Stage 1 Hypertension';
-    bpBadgeClass = 'bg-orange-50 text-orange-700 border-orange-200';
-  } else if (sys >= 120 && sys <= 129 && dia < 80) {
-    bpCategory = 'Elevated Blood Pressure';
-    bpBadgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
-  }
+  const sys = patient.bloodPressureVitals?.systolic;
+  const dia = patient.bloodPressureVitals?.diastolic;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
@@ -80,7 +69,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
             </div>
             <div>
               <h3 className="font-bold text-lg text-white">Patient Clinical Intake Record</h3>
-              <p className="text-xs text-sky-200 font-mono">Varma Nursing Home • Registration Summary</p>
+              <p className="text-xs text-sky-200 font-mono">{patient.clinicName ?? 'Varma Nursing Home'} • Registration Summary</p>
             </div>
           </div>
           <button
@@ -101,9 +90,9 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
                 <User className="h-6 w-6" />
               </div>
               <div>
-                <h4 className="font-bold text-slate-900 text-base">{patient.patientIdentity.name}</h4>
+                <h4 className="font-bold text-slate-900 text-base">{formatPatientName(patient.patientIdentity)}</h4>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-slate-600 font-medium">{patient.patientIdentity.age} Years Old</span>
+                  <span className="text-xs text-slate-600 font-medium">{patient.patientIdentity.age} yr {patient.patientIdentity.ageMonths != null && `${patient.patientIdentity.ageMonths} mo`}</span>
                   <span className="text-slate-300">•</span>
                   <span className={`text-xs px-2 py-0.5 rounded-md font-semibold border ${
                     patient.patientIdentity.gender === 'Female' 
@@ -113,13 +102,14 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
                     {patient.patientIdentity.gender}
                   </span>
                 </div>
+                {patient.patientIdentity.phone && <p className="text-xs text-slate-600">{patient.patientIdentity.phone}</p>}
               </div>
             </div>
 
             <div className="flex items-center gap-2">
               <div className="text-right">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Registration ID</span>
-                <span className="text-xs font-mono font-bold text-slate-700">{patient._id}</span>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Patient ID</span>
+                <span className="text-xs font-mono font-bold text-slate-700">{patient.patientId ?? patient._id}</span>
               </div>
               <button
                 type="button"
@@ -141,18 +131,15 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
                   <Heart className="h-4 w-4" />
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Blood Pressure</span>
                 </div>
-                <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border ${bpBadgeClass}`}>
-                  {bpCategory}
-                </span>
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-extrabold font-mono text-slate-900">
-                  {sys}/{dia}
+                  {sys ?? '—'}/{dia ?? '—'}
                 </span>
                 <span className="text-xs text-slate-500 font-medium">mmHg</span>
               </div>
               <p className="text-[11px] text-slate-500 mt-2">
-                Systolic: <strong className="text-slate-700">{sys} mmHg</strong> • Diastolic: <strong className="text-slate-700">{dia} mmHg</strong>
+                Systolic: <strong className="text-slate-700">{sys ?? '—'} mmHg</strong> • Diastolic: <strong className="text-slate-700">{dia ?? '—'} mmHg</strong>
               </p>
             </div>
 
@@ -163,19 +150,19 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
                   <Activity className="h-4 w-4" />
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Body Measurements</span>
                 </div>
-                <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border ${bmiBadgeClass}`}>
+                {bmi && <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border ${bmiBadgeClass}`}>
                   BMI: {bmi} ({bmiCategory})
-                </span>
+                </span>}
               </div>
               <div className="grid grid-cols-2 gap-2 text-slate-800">
                 <div>
                   <span className="text-[10px] uppercase font-bold text-slate-400 block">Height</span>
-                  <span className="text-xl font-bold font-mono text-slate-900">{patient.bodyMeasurements.height}</span>
+                  <span className="text-xl font-bold font-mono text-slate-900">{patient.bodyMeasurements?.height ?? '—'}</span>
                   <span className="text-xs text-slate-500 ml-1">cm</span>
                 </div>
                 <div>
                   <span className="text-[10px] uppercase font-bold text-slate-400 block">Weight</span>
-                  <span className="text-xl font-bold font-mono text-slate-900">{patient.bodyMeasurements.weight}</span>
+                  <span className="text-xl font-bold font-mono text-slate-900">{patient.bodyMeasurements?.weight ?? '—'}</span>
                   <span className="text-xs text-slate-500 ml-1">kg</span>
                 </div>
               </div>
@@ -221,4 +208,3 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patient,
     </div>
   );
 };
-

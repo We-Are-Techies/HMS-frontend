@@ -1,81 +1,41 @@
-export interface PatientRegistrationData {
+export const genders = ['Male', 'Female', 'Transgender', 'Prefer not to disclose'] as const;
+export type Gender = (typeof genders)[number];
+export type Language = 'en' | 'ta';
+export const patientTitles = ['Mr', 'Ms', 'Mrs', 'Baby'] as const;
+export type PatientTitle = (typeof patientTitles)[number];
+
+export interface PatientIdentity {
   name: string;
-  age: string;
-  gender: '1. Male' | '2. Female' | '';
-  height: string;
-  weight: string;
-  systolicBP: string;
-  diastolicBP: string;
-  registrationDate: string;
-  registrationTime: string;
+  title?: PatientTitle;
+  age: number;
+  ageMonths?: number;
+  gender: Gender;
+  phone?: string;
 }
 
-export interface PatientRecord extends PatientRegistrationData {
-  id: string;
-  submittedAt: string;
-  bmi?: number;
-  bmiCategory?: string;
-  bpCategory?: string;
+export function formatPatientName({ title, name }: PatientIdentity): string {
+  return title ? `${title} ${name}` : name;
 }
 
-export interface FormErrors {
-  name?: string;
-  age?: string;
-  gender?: string;
-  height?: string;
-  weight?: string;
-  systolicBP?: string;
-  diastolicBP?: string;
-  general?: string;
+export interface PatientMatch {
+  patientId: number | string;
+  patientIdentity: PatientIdentity;
 }
 
-// Backend DTO mapping
 export interface CreatePatientRegistrationPayload {
-  patientIdentity: {
-    name: string;
-    age: number;
-    gender: 'Male' | 'Female';
-  };
-  bodyMeasurements: {
-    height: number;
-    weight: number;
-  };
-  bloodPressureVitals: {
-    systolic: number;
-    diastolic: number;
-  };
+  clinicName: string;
+  language: Language;
+  patientIdentity: PatientIdentity;
+  bodyMeasurements: { height?: number; weight?: number };
+  bloodPressureVitals: { systolic?: number; diastolic?: number };
 }
 
-export interface BackendPatientRegistrationResponse {
+export interface BackendPatientRegistrationResponse extends Omit<CreatePatientRegistrationPayload, 'clinicName' | 'language'> {
   _id: string;
-  patientIdentity: {
-    name: string;
-    age: number;
-    gender: 'Male' | 'Female';
-  };
-  bodyMeasurements: {
-    height: number;
-    weight: number;
-  };
-  bloodPressureVitals: {
-    systolic: number;
-    diastolic: number;
-  };
-  registrationTimestamp: {
-    date: string;
-    time: string;
-  };
+  patientId?: number | string;
+  clinicName?: string;
+  language?: Language;
+  registrationTimestamp: { date: string; time: string };
   createdAt: string;
   updatedAt: string;
-}
-
-export interface PaginatedPatientResponse {
-  statusCode: number;
-  data: BackendPatientRegistrationResponse[];
-  meta: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
 }

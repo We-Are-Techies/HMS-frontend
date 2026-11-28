@@ -5,11 +5,10 @@ import { RegistrationForm } from './components/RegistrationForm';
 import { SuccessModal } from './components/SuccessModal';
 import { AdminLogin } from './components/admin/AdminLogin';
 import { AdminDashboard } from './components/admin/AdminDashboard';
-import type { PatientRecord } from './types/registration';
+import type { BackendPatientRegistrationResponse, Language } from './types/registration';
 import type { AdminUser } from './types/admin';
-import { patientRegistrationService } from './api/patientRegistration.service';
 import { adminService } from './api/admin.service';
-import { Users, FileCheck, Phone, ShieldCheck } from 'lucide-react';
+import { Phone, ShieldCheck } from 'lucide-react';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -23,16 +22,16 @@ export function App() {
     return 'welcome';
   });
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
-  const [lastRecord, setLastRecord] = useState<PatientRecord | null>(null);
-  const [registeredPatients, setRegisteredPatients] = useState<PatientRecord[]>(() => {
-    try {
-      const saved = localStorage.getItem('vnh_registered_patients');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [showRecentDrawer, setShowRecentDrawer] = useState(false);
+  const [confirmation, setConfirmation] = useState<{
+    record: BackendPatientRegistrationResponse;
+    isConsultation: boolean;
+  } | null>(null);
+  const [registrationLanguage, setRegistrationLanguage] = useState<Language>('en');
+  const [resumeExisting, setResumeExisting] = useState(false);
+
+  useEffect(() => {
+    localStorage.removeItem('vnh_registered_patients');
+  }, []);
 
   // Check existing admin cookie session on mount
   useEffect(() => {
@@ -69,34 +68,8 @@ export function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [adminUser]);
 
-  // Synchronize recent registrations from backend on mount
-  useEffect(() => {
-    patientRegistrationService
-      .getAllRegistrations(1, 20)
-      .then((res) => {
-        if (res && res.data && res.data.length > 0) {
-          const mapped: PatientRecord[] = res.data.map((p) => ({
-            id: p._id,
-            name: p.patientIdentity.name,
-            age: String(p.patientIdentity.age),
-            gender: p.patientIdentity.gender === 'Female' ? '2. Female' : '1. Male',
-            height: String(p.bodyMeasurements.height),
-            weight: String(p.bodyMeasurements.weight),
-            systolicBP: String(p.bloodPressureVitals.systolic),
-            diastolicBP: String(p.bloodPressureVitals.diastolic),
-            registrationDate: p.registrationTimestamp.date,
-            registrationTime: p.registrationTimestamp.time,
-            submittedAt: p.createdAt,
-          }));
-          setRegisteredPatients(mapped);
-        }
-      })
-      .catch((err) => {
-        console.warn('Could not fetch existing patient registrations from backend:', err.message);
-      });
-  }, []);
-
   const handleStartRegistration = () => {
+    setResumeExisting(false);
     setCurrentPage('form');
     window.history.pushState(null, '', '/');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -108,25 +81,20 @@ export function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSubmitSuccess = (record: PatientRecord) => {
-    setLastRecord(record);
-    const updated = [record, ...registeredPatients];
-    setRegisteredPatients(updated);
-    try {
-      localStorage.setItem('vnh_registered_patients', JSON.stringify(updated.slice(0, 50)));
-    } catch {
-      // ignore storage quota issues
-    }
+  const handleSubmitSuccess = (record: BackendPatientRegistrationResponse, isConsultation: boolean) => {
+    setConfirmation({ record, isConsultation });
     setCurrentPage('success');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleRegisterAnother = () => {
+    setResumeExisting(false);
     setCurrentPage('form');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleGoToAdmin = () => {
+    setResumeExisting(false);
     if (adminUser) {
       setCurrentPage('admin-dashboard');
       window.history.pushState(null, '', '/admin');
@@ -139,6 +107,12 @@ export function App() {
 
   const handleLoginSuccess = (admin: AdminUser) => {
     setAdminUser(admin);
+    if (resumeExisting) {
+      setCurrentPage('form');
+      window.history.replaceState(null, '', '/');
+      window.scrollTo({ top: 0 });
+      return;
+    }
     setCurrentPage('admin-dashboard');
     window.history.pushState(null, '', '/admin');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -167,58 +141,6 @@ export function App() {
       {/* Clinic Header */}
       <Header onGoHome={handleBackToWelcome} onGoToAdmin={handleGoToAdmin} />
 
-      {/* Floating Recent Intake Counter & Toggle (Only on public screens) */}
-      {registeredPatients.length > 0 && (currentPage === 'welcome' || currentPage === 'form') && (
-        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-4 flex justify-end">
-          <button
-            type="button"
-            onClick={() => setShowRecentDrawer(!showRecentDrawer)}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:text-blue-700 hover:border-blue-300 shadow-2xs transition-colors cursor-pointer"
-          >
-            <Users className="h-3.5 w-3.5 text-blue-600" />
-            <span>Today's Registrations ({registeredPatients.length})</span>
-          </button>
-        </div>
-      )}
-
-      {/* Recent Registrations Quick Slide-out / Modal */}
-      {showRecentDrawer && (currentPage === 'welcome' || currentPage === 'form') && (
-        <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 mt-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <FileCheck className="h-5 w-5 text-blue-600" />
-                <h3 className="font-bold text-sm text-slate-900">Recent Patient Registrations</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowRecentDrawer(false)}
-                className="text-xs text-slate-400 hover:text-slate-600 font-semibold cursor-pointer"
-              >
-                Close ✕
-              </button>
-            </div>
-
-            <div className="mt-3 max-h-60 overflow-y-auto divide-y divide-slate-100 text-xs">
-              {registeredPatients.map((p) => (
-                <div key={p.id} className="py-2.5 flex items-center justify-between">
-                  <div>
-                    <span className="font-mono font-bold text-blue-700 mr-2">{p.id}</span>
-                    <span className="font-semibold text-slate-900">{p.name}</span>
-                    <span className="text-slate-500 ml-2">({p.age}y, {p.gender})</span>
-                  </div>
-                  <div className="text-right text-slate-500 font-mono">
-                    <span>BP: {p.systolicBP}/{p.diastolicBP}</span>
-                    <span className="mx-2">•</span>
-                    <span>{p.registrationTime}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Main Content Pages */}
       <main className="flex-1">
         {currentPage === 'welcome' && (
@@ -228,13 +150,21 @@ export function App() {
         {currentPage === 'form' && (
           <RegistrationForm 
             onBack={handleBackToWelcome} 
-            onSubmitSuccess={handleSubmitSuccess} 
+            onSubmitSuccess={handleSubmitSuccess}
+            language={registrationLanguage}
+            onLanguageChange={setRegistrationLanguage}
+            staffSignedIn={Boolean(adminUser)}
+            startExisting={resumeExisting}
+            onStaffLogin={() => {
+              handleGoToAdmin();
+              setResumeExisting(true);
+            }}
           />
         )}
 
-        {currentPage === 'success' && lastRecord && (
+        {currentPage === 'success' && confirmation && (
           <SuccessModal
-            record={lastRecord}
+            {...confirmation}
             onRegisterAnother={handleRegisterAnother}
             onGoHome={handleBackToWelcome}
           />

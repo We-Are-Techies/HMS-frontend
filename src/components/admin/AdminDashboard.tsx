@@ -21,6 +21,7 @@ import { adminService } from '../../api/admin.service';
 import { PatientDetailModal } from './PatientDetailModal';
 import type { AdminUser, DashboardStats } from '../../types/admin';
 import type { BackendPatientRegistrationResponse } from '../../types/registration';
+import { formatPatientName } from '../../types/registration';
 
 interface AdminDashboardProps {
   admin: AdminUser;
@@ -431,9 +432,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </tr>
                 ) : (
                   patients.map((p) => {
-                    const sys = p.bloodPressureVitals.systolic;
-                    const dia = p.bloodPressureVitals.diastolic;
-                    const isHighBP = sys >= 130 || dia >= 85;
+                    const sys = p.bloodPressureVitals?.systolic;
+                    const dia = p.bloodPressureVitals?.diastolic;
 
                     return (
                       <tr 
@@ -443,20 +443,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       >
                         {/* 1. Registration ID */}
                         <td className="py-3.5 px-4 font-mono font-bold text-blue-700">
-                          {p._id.slice(-8)}
+                          {p.patientId ?? p._id.slice(-8)}
                           <span className="text-[10px] text-slate-400 font-normal block font-sans">
-                            #{p._id}
+                            #{p.patientId ?? p._id}
                           </span>
                         </td>
 
                         {/* 2. Patient Name */}
                         <td className="py-3.5 px-4 font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
-                          {p.patientIdentity.name}
+                          {formatPatientName(p.patientIdentity)}
                         </td>
 
                         {/* 3. Age */}
                         <td className="py-3.5 px-3 text-slate-700 font-medium">
-                          {p.patientIdentity.age}y
+                          {p.patientIdentity.age}y {p.patientIdentity.ageMonths != null && `${p.patientIdentity.ageMonths}m`}
                         </td>
 
                         {/* 4. Gender */}
@@ -472,24 +472,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                         {/* 5. Height (cm) */}
                         <td className="py-3.5 px-3 font-mono text-slate-800">
-                          {p.bodyMeasurements.height} <span className="text-[10px] text-slate-400">cm</span>
+                          {p.bodyMeasurements?.height ?? '—'} <span className="text-[10px] text-slate-400">cm</span>
                         </td>
 
                         {/* 6. Weight (kg) */}
                         <td className="py-3.5 px-3 font-mono text-slate-800">
-                          {p.bodyMeasurements.weight} <span className="text-[10px] text-slate-400">kg</span>
+                          {p.bodyMeasurements?.weight ?? '—'} <span className="text-[10px] text-slate-400">kg</span>
                         </td>
 
                         {/* 7 & 8. Systolic & Diastolic BP */}
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-1.5 font-mono">
-                            <span className={`font-bold ${isHighBP ? 'text-rose-600' : 'text-slate-900'}`}>
-                              {sys}/{dia}
+                            <span className="font-bold text-slate-900">
+                              {sys ?? '—'}/{dia ?? '—'}
                             </span>
                             <span className="text-[10px] text-slate-400">mmHg</span>
-                            {isHighBP && (
-                              <span className="inline-block h-2 w-2 rounded-full bg-rose-500 animate-pulse ml-0.5" title="Elevated BP" />
-                            )}
                           </div>
                         </td>
 
